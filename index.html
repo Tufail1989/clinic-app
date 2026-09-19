@@ -1,0 +1,1478 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#1B5CE8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Clinic AI">
+<link rel="apple-touch-icon" href="./icon.svg">
+<title>Clinic console — AI receptionist demo</title>
+<style>
+:root{
+  --bg:#EEF3FC;--surface:#FFF;--ink:#0C1A33;--muted:#5A6B87;--line:#D2DEF2;
+  --blue:#1B5CE8;--blue-dark:#1348C0;--cyan:#00A9CF;
+  --green:#12885A;--green-dark:#0E6F49;--green-bg:#DAF5E8;
+  --red:#D22D2D;--red-bg:#FDE3E3;--amber:#B4530B;--amber-bg:#FCE9D4;
+  --purple:#6B3FD4;--purple-bg:#EBE3FC;
+  --out:#DCE8FF;--flash:#C7DBFF;--shell:#DDE6F7;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0A1222;--surface:#131F36;--ink:#E6EDFA;--muted:#93A4C2;--line:#27375A;
+  --blue:#5B8DEF;--blue-dark:#4477DC;--cyan:#39C7E6;
+  --green:#3FD69B;--green-dark:#2FBF88;--green-bg:#123A2E;
+  --red:#FF8080;--red-bg:#43201F;--amber:#F0B45E;--amber-bg:#3A2A14;
+  --purple:#B49BF5;--purple-bg:#241B44;
+  --out:#1E2F53;--flash:#25406E;--shell:#0E1930;
+}}
+:root[data-theme="dark"]{
+  --bg:#0A1222;--surface:#131F36;--ink:#E6EDFA;--muted:#93A4C2;--line:#27375A;
+  --blue:#5B8DEF;--blue-dark:#4477DC;--cyan:#39C7E6;
+  --green:#3FD69B;--green-dark:#2FBF88;--green-bg:#123A2E;
+  --red:#FF8080;--red-bg:#43201F;--amber:#F0B45E;--amber-bg:#3A2A14;
+  --purple:#B49BF5;--purple-bg:#241B44;
+  --out:#1E2F53;--flash:#25406E;--shell:#0E1930;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Arial,"Helvetica Neue",Helvetica,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:20px 14px 60px}
+h1{font-size:clamp(1.4rem,4.2vw,2rem);margin:0 0 .2rem}
+.sub{color:var(--muted);margin:0 0 14px;max-width:64ch}
+#banner{display:none;margin:0 0 12px;padding:10px 13px;border-radius:10px;background:var(--red-bg);color:var(--red);border:1px solid var(--red);font-size:.9rem}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.tab{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 15px;font:inherit;cursor:pointer}
+.tab.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:bold}
+.tab .badge{display:inline-block;min-width:20px;margin-left:6px;padding:0 6px;border-radius:999px;background:var(--red);color:#fff;font-size:.78rem;font-weight:bold}
+.panel{display:none}.panel.on{display:block}
+.grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+h2{font-size:1.08rem;margin:0 0 4px}
+.hint{color:var(--muted);font-size:.86rem;margin:0 0 12px}
+label{display:block;font-size:.83rem;color:var(--muted);margin:10px 0 4px}
+input,textarea{width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:9px;padding:9px 11px;font:inherit;font-size:.95rem}
+textarea{min-height:120px;font-family:ui-monospace,Consolas,monospace;font-size:.84rem;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btns{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:9px;padding:9px 14px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--blue)}
+button.go{background:var(--green);color:#fff;border-color:var(--green);font-weight:bold}
+button.go:hover{background:var(--green-dark)}
+button.blue{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:bold}
+button.blue:hover{background:var(--blue-dark)}
+button.warn{background:var(--red);color:#fff;border-color:var(--red);font-weight:bold}
+button.sm{padding:5px 10px;font-size:.85rem;border-radius:7px}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.phone{background:var(--shell);border:1px solid var(--line);border-radius:22px;padding:8px}
+.chat{background:var(--surface);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;height:min(540px,68vh)}
+.top{display:flex;align-items:center;gap:10px;padding:10px 12px;background:linear-gradient(100deg,var(--blue),var(--cyan));color:#fff}
+.top b{display:block;line-height:1.15}.top small{opacity:.92;font-size:.77rem}
+.dot{width:33px;height:33px;border-radius:50%;background:rgba(255,255,255,.25);display:grid;place-items:center;font-weight:bold;flex:none}
+.log{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.msg{max-width:87%;padding:8px 11px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word;font-size:.94rem}
+.bot{background:var(--surface);align-self:flex-start;border:1px solid var(--line);border-bottom-left-radius:4px}
+.bot.ok{border-left:4px solid var(--green);background:var(--green-bg)}
+.bot.alert{border-left:4px solid var(--red);background:var(--red-bg);color:var(--red);font-weight:bold}
+.bot.pay{border-left:4px solid var(--purple);background:var(--purple-bg)}
+.bot.staff{border-left:4px solid var(--blue);background:var(--out)}
+.me{background:var(--out);align-self:flex-end;border-bottom-right-radius:4px}
+.me.symptom{background:var(--red-bg);color:var(--red);border:1px solid var(--red);font-weight:bold}
+.me.voice{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple)}
+.sys{align-self:center;color:var(--muted);font-size:.79rem;text-align:center;max-width:92%}
+.chips{display:flex;flex-wrap:wrap;gap:6px;max-height:108px;overflow-y:auto;padding:8px 10px;border-top:1px solid var(--line);background:var(--surface)}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:6px 11px;font:inherit;font-size:.83rem;cursor:pointer}
+.chip.red{border-color:var(--red);color:var(--red)}
+.chip.green{border-color:var(--green);color:var(--green)}
+.chip.purple{border-color:var(--purple);color:var(--purple)}
+form.composer{display:flex;gap:8px;padding:9px;border-top:1px solid var(--line);background:var(--surface)}
+.composer input{border-radius:999px}
+.composer button{border-radius:999px;background:var(--green);color:#fff;border-color:var(--green);font-weight:bold}
+.composer .mic{background:var(--purple);border-color:var(--purple);padding:0 13px;font-size:1.05rem}
+.composer .mic.rec{background:var(--red);border-color:var(--red);animation:pulse 1.1s infinite}
+.composer .mic:disabled{background:var(--line);border-color:var(--line);color:var(--muted);cursor:not-allowed}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(210,45,45,.55)}70%{box-shadow:0 0 0 9px rgba(210,45,45,0)}100%{box-shadow:0 0 0 0 rgba(210,45,45,0)}}
+.voicebar{display:flex;gap:8px;align-items:center;padding:6px 10px;border-top:1px solid var(--line);background:var(--surface);font-size:.83rem;color:var(--muted)}
+.recbar{display:none;align-items:center;gap:10px;padding:8px 11px;border-top:1px solid var(--line);background:var(--red-bg);color:var(--red);font-weight:bold}
+.recbar.on{display:flex}
+.recdot{width:11px;height:11px;border-radius:50%;background:var(--red);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.wave{display:flex;gap:2px;align-items:flex-end;height:18px;flex:1}
+.wave i{display:block;width:3px;background:var(--red);border-radius:2px;height:4px}
+.voicemsg{display:flex;align-items:center;gap:9px;min-width:190px}
+.playbtn{width:30px;height:30px;border-radius:50%;border:0;background:var(--purple);color:#fff;font-size:.85rem;cursor:pointer;flex:none}
+.bars{display:flex;gap:2px;align-items:center;height:20px;flex:1}
+.bars i{display:block;width:3px;border-radius:2px;background:var(--purple);opacity:.55}
+.slotgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px;margin-top:8px}
+.slot{border:1px solid var(--line);border-radius:8px;padding:6px 4px;text-align:center;font-size:.83rem;background:var(--bg)}
+.slot.taken{background:var(--green-bg);border-color:var(--green);color:var(--green);font-weight:bold}
+.slot.hold{background:var(--amber-bg);border-color:var(--amber);color:var(--amber);font-weight:bold}
+.voicebar select{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:4px 8px;font:inherit;font-size:.83rem}
+@media (prefers-reduced-motion:reduce){.composer .mic.rec{animation:none}}
+.sheet{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.r{display:grid;grid-template-columns:112px minmax(0,1fr);border-top:1px solid var(--line)}
+.r:first-child{border-top:0}
+.r dt{padding:8px 11px;color:var(--muted);font-size:.85rem;border-right:1px solid var(--line)}
+.r dd{margin:0;padding:8px 11px;font-weight:bold;transition:background-color .9s}
+.r dd.empty{color:var(--muted);font-weight:normal}
+.r dd.flash{background:var(--flash);transition:none}
+.pill{display:inline-block;padding:1px 9px;border-radius:999px;font-size:.84rem;font-weight:bold;background:var(--out)}
+.pill.red{background:var(--red-bg);color:var(--red)}
+.pill.amber{background:var(--amber-bg);color:var(--amber)}
+.pill.green{background:var(--green-bg);color:var(--green)}
+.pill.purple{background:var(--purple-bg);color:var(--purple)}
+.book{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;background:var(--surface)}
+.book.new{border-left:4px solid var(--amber)}
+.book.confirmed{border-left:4px solid var(--green)}
+.book.emergency{border-left:4px solid var(--red)}
+.book h3{margin:0 0 2px;font-size:1rem}
+.book .meta{color:var(--muted);font-size:.87rem;margin-bottom:8px}
+.timeline{margin:8px 0 0;padding:8px 0 0;border-top:1px dashed var(--line);font-size:.85rem;color:var(--muted)}
+.timeline div{display:flex;gap:8px;align-items:baseline}
+.timeline b{color:var(--ink);font-weight:bold}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:14px 0}
+.stats div{background:var(--surface);padding:12px 13px}
+.stats strong{display:block;font-size:1.45rem;line-height:1.15}
+.stats span{color:var(--muted);font-size:.8rem}
+table{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:8px}
+th,td{text-align:left;padding:8px 9px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:normal;font-size:.84rem}
+td.yes{color:var(--green);font-weight:bold}
+td.no{color:var(--red)}
+.empty-note{color:var(--muted);font-size:.9rem;padding:10px 2px}
+#toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--green);color:#fff;padding:10px 16px;border-radius:999px;font-weight:bold;transition:opacity .2s,transform .2s;pointer-events:none;z-index:9;max-width:92vw;text-align:center}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Clinic console — AI receptionist</h1>
+  <p class="sub">Patient chat, front-desk actions, deposits, reminders and recall — plus the revenue report that proves it paid for itself.</p>
+  <div id="banner" role="alert"></div>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="chat" type="button">Patient chat</button>
+    <button class="tab" data-tab="desk" type="button">Front desk<span class="badge" id="deskBadge" style="display:none">0</span></button>
+    <button class="tab" data-tab="impact" type="button">Revenue report</button>
+    <button class="tab" data-tab="setup" type="button">Clinic setup</button>
+  </div>
+
+  <!-- CHAT -->
+  <section class="panel on" id="p-chat">
+    <div class="grid">
+      <div>
+        <div class="phone">
+          <div class="chat">
+            <div class="top"><div class="dot" id="ini">CD</div><div><b id="hname">Crescent Dental</b><small id="hsub">Replies instantly, 24/7</small></div></div>
+            <div class="log" id="log" aria-live="polite"></div>
+            <div class="chips" id="chips"></div>
+            <div class="voicebar">
+              <span>Voice language</span>
+              <select id="voiceLang" aria-label="Voice language">
+                <option value="ur-PK">Urdu</option>
+                <option value="en-US" selected>English</option>
+                <option value="en-IN">English (South Asia)</option>
+                <option value="ar-AE">Arabic</option>
+                <option value="hi-IN">Hindi</option>
+              </select>
+              <span id="voiceHint" style="margin-left:auto;font-size:.8rem"></span>
+            </div>
+            <div class="voicebar" id="voiceRow2">
+              <input id="voiceText" placeholder="Or type what the patient would SAY, then send as a voice note" aria-label="Voice note text" style="flex:1;font-size:.85rem;padding:6px 10px">
+              <button type="button" class="sm purple" id="voiceSend">Send as voice note</button>
+            </div>
+            <div class="voicebar" id="voiceState" style="display:none"></div>
+            <div class="recbar" id="recbar">
+              <span class="recdot"></span>
+              <span id="recTime">0:00</span>
+              <span class="wave" id="wave"></span>
+              <button type="button" class="sm" id="recCancel">Cancel</button>
+              <button type="button" class="sm go" id="recSend">Send</button>
+            </div>
+            <form class="composer" id="composer">
+              <button type="button" class="mic" id="mic" title="Hold a conversation by voice" aria-label="Record a voice message">🎤</button>
+              <input id="input" autocomplete="off" placeholder="Type or tap the mic..." aria-label="Message">
+              <button type="submit">Send</button>
+            </form>
+          </div>
+        </div>
+        <p class="hint" id="mode" style="margin-top:10px">Demo brain active — replies work with no setup.</p>
+      </div>
+      <div>
+        <div class="card">
+          <h2>Live booking sheet</h2>
+          <p class="hint">Filled in as the patient chats. Confirmed bookings appear under Front desk.</p>
+          <dl class="sheet" style="margin-top:0">
+            <div class="r"><dt>Patient</dt><dd data-k="name" class="empty">-</dd></div>
+            <div class="r"><dt>Needs</dt><dd data-k="treatment" class="empty">-</dd></div>
+            <div class="r"><dt>Urgency</dt><dd data-k="urgency" class="empty">-</dd></div>
+            <div class="r"><dt>Preferred</dt><dd data-k="preferred_time" class="empty">-</dd></div>
+            <div class="r"><dt>Status</dt><dd data-k="status" class="empty">New chat</dd></div>
+          </dl>
+          <div class="btns">
+            <button class="sm" id="newPatient" type="button">New patient chat</button>
+            <button class="sm purple" id="voiceBtn" type="button">🎤 Send voice note</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FRONT DESK -->
+  <section class="panel" id="p-desk">
+    <div class="card">
+      <h2>Booking requests</h2>
+      <p class="hint">What your staff sees. Confirm a slot, ask for a deposit, or mark a no-show — every action writes back into the patient's WhatsApp chat.</p>
+      <div id="bookings"><p class="empty-note">No requests yet. Book an appointment in the Patient chat tab first.</p></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>Today's chair schedule</h2>
+      <p class="hint">Confirming a request takes a real slot. Freeing one automatically offers it to the waitlist.</p>
+      <div class="slotgrid" id="slots"></div>
+      <div class="btns">
+        <button class="sm" id="takeover" type="button">Staff takeover: OFF</button>
+        <button class="sm warn" id="broadcast" type="button">Broadcast: doctor running late</button>
+        <button class="sm blue" id="csv" type="button">Copy bookings as CSV</button>
+        <button class="sm" id="digest" type="button">Send doctor's daily summary</button>
+        <button class="sm" id="fillWait" type="button">Offer free slots to waitlist</button>
+      </div>
+      <p class="hint" id="waitNote" style="margin-top:10px"></p>
+      <div class="two" style="margin-top:8px">
+        <input id="staffMsg" placeholder="Reply to the patient as staff..." aria-label="Staff message">
+        <button class="sm go" id="staffSend" type="button">Send as staff</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Patient file</h2>
+      <p class="hint">Medical history with this clinic, the next appointment, and a printable record you can save as PDF.</p>
+      <div id="record"><p class="empty-note">No patient file yet. Book an appointment first.</p></div>
+      <div class="btns">
+        <button class="sm blue" id="recPdf" type="button">Open printable record (save as PDF)</button>
+        <button class="sm" id="recSendPatient" type="button">Send record to patient</button>
+        <button class="sm" id="recNotify" type="button">Notify doctor + patient</button>
+      </div>
+      <div id="printPanel" style="display:none;margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--bg)"></div>
+    </div>
+  </section>
+
+  <!-- IMPACT -->
+  <section class="panel" id="p-impact">
+    <div class="card">
+      <h2>Revenue report</h2>
+      <p class="hint">The monthly proof you hand the clinic owner. Change the three numbers to match their practice.</p>
+      <div class="two">
+        <div><label for="i-fee">Average fee per visit</label><input id="i-fee" value="2000" inputmode="numeric"></div>
+        <div><label for="i-visits">Patients booked per month</label><input id="i-visits" value="300" inputmode="numeric"></div>
+      </div>
+      <div class="two">
+        <div><label for="i-noshow">No-show rate now (%)</label><input id="i-noshow" value="30" inputmode="numeric"></div>
+        <div><label for="i-deposit">Deposit asked at booking</label><input id="i-deposit" value="500" inputmode="numeric"></div>
+      </div>
+      <div class="two">
+        <div><label for="i-price">Your monthly fee to the clinic</label><input id="i-price" value="14999" inputmode="numeric"></div>
+        <div><label for="i-after">Messages arriving after hours (%)</label><input id="i-after" value="40" inputmode="numeric"></div>
+      </div>
+      <div class="stats" id="stats"></div>
+      <p class="hint" id="roiLine"></p>
+      <h2 style="margin-top:18px">How this compares</h2>
+      <p class="hint">Against a typical PKR 3,999/month WhatsApp clinic bot.</p>
+      <table>
+        <tr><th>Capability</th><th>Typical bot</th><th>This system</th></tr>
+        <tr><td>Answers patients 24/7 in Urdu</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Appointment reminders (24h + 2h)</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Reschedule and cancel in chat</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Custom clinic FAQs</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Staff takeover of a chat</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Live free-slot picker and doctor choice</td><td class="no">Menu only</td><td class="yes">Yes</td></tr>
+        <tr><td>Waitlist auto-fills cancelled chairs</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>"Doctor running late" broadcast</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Google review requests after visits</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Deposit collected at booking</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Medical emergency triage</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>6-month recall that creates bookings</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Voice notes understood</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Patient file with history + PDF</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Doctor notified with the patient file</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Private feedback before public reviews</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Doctor's end-of-day summary</td><td class="no">No</td><td class="yes">Yes</td></tr>
+        <tr><td>Monthly revenue report</td><td class="no">No</td><td class="yes">Yes</td></tr>
+      </table>
+      <p class="hint">Figures are estimates from the inputs above, not measured results. Use the clinic's own numbers on a sales call.</p>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section class="panel" id="p-setup">
+    <div class="card">
+      <h2>Clinic setup</h2>
+      <p class="hint">Fill in a real clinic's details before recording a demo.</p>
+      <label for="f-name">Clinic name</label><input id="f-name" value="Crescent Dental">
+      <div class="two">
+        <div><label for="f-city">City</label><input id="f-city" value="Lahore"></div>
+        <div><label for="f-cur">Currency</label><input id="f-cur" value="PKR"></div>
+      </div>
+      <div class="two">
+        <div><label for="f-phone">Phone</label><input id="f-phone" value="+92 300 0000000"></div>
+        <div><label for="f-lang">Languages</label><input id="f-lang" value="English, Urdu, Roman Urdu"></div>
+      </div>
+      <label for="f-hours">Timings</label><input id="f-hours" value="Mon-Sat 10:00-21:00, Sunday closed">
+      <label for="f-doctors">Doctors (comma separated)</label><input id="f-doctors" value="Dr. Ayesha Khan, Dr. Bilal Ahmed">
+      <label for="f-services">Services and prices — one per line, "name: range"</label>
+      <textarea id="f-services">Check-up / consultation: 2,000-3,000
+Cleaning / scaling: 5,000-8,000
+Filling: 5,000-12,000
+Root canal: 18,000-35,000
+Teeth whitening: 25,000-45,000
+Braces / aligners: 150,000-350,000</textarea>
+      <label for="f-notes">Other notes</label><input id="f-notes" value="Free parking. JazzCash and Easypaisa accepted. Female dentist on request.">
+      <label for="f-faq">Clinic FAQs — one per line, "keywords | answer"</label>
+      <textarea id="f-faq" style="min-height:90px">insurance, panel, claim | We are on the panel of State Life and Jubilee. Bring your card and CNIC.
+child, bachay, kids | Yes, we treat children from age 3. A parent must come along.
+emergency, after hours | Outside timings, call the clinic number and the on-call doctor will answer.</textarea>
+      <div class="btns">
+        <button class="go" id="apply" type="button">Save &amp; restart demo</button>
+        <button class="blue" id="export" type="button">Copy clinic JSON</button>
+      </div>
+      <p class="hint" id="note" style="margin-top:12px">Saved in this browser only.</p>
+      <p class="hint" style="margin-top:4px">Version 1.2 — live AI, patient files, feedback routing, doctor digest.</p>
+    </div>
+  </section>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+(function () {
+"use strict";
+
+var MISSING = document.createElement("span"); // safe stand-in so a missing element can never break the page
+var $ = function (id) { return document.getElementById(id) || MISSING; };
+window.addEventListener("error", function (e) {
+  var b = $("banner"); b.textContent = "Page error: " + (e.message || "unknown"); b.style.display = "block";
+});
+
+var FIELDS = ["name","city","cur","phone","lang","hours","doctors","services","notes","faq"];
+var KEY = "clinic-console-v1";
+var cfg = {}, transcript = [], lead = {}, prev = {}, busy = false;
+var sample = null, samplePromise = null;
+var bookings = [], seq = 1, stats = { handled: 0, afterHours: 0, patient: 0, booked: 0 };
+var aiPaused = false;
+
+/* ---------------- config ---------------- */
+function readForm() {
+  var o = {}, i, el;
+  for (i = 0; i < FIELDS.length; i++) { el = $("f-" + FIELDS[i]); o[FIELDS[i]] = el ? el.value.trim() : ""; }
+  return o;
+}
+function loadSaved() {
+  try {
+    var s = JSON.parse(localStorage.getItem(KEY) || "null"); if (!s) return;
+    for (var i = 0; i < FIELDS.length; i++) {
+      var el = $("f-" + FIELDS[i]);
+      if (el && typeof s[FIELDS[i]] === "string") el.value = s[FIELDS[i]];
+    }
+  } catch (e) {}
+}
+function persist(o) { try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) {} }
+function services(c) {
+  var out = [], lines = (c.services || "").split("\n"), i, l, idx, nm, pr, words;
+  for (i = 0; i < lines.length; i++) {
+    l = lines[i].trim(); if (!l) continue;
+    idx = l.indexOf(":");
+    nm = idx < 0 ? l : l.slice(0, idx).trim();
+    pr = idx < 0 ? "" : l.slice(idx + 1).trim();
+    words = nm.toLowerCase().replace(/[^a-z ]/g, " ").split(/\s+/).filter(function (w) { return w.length > 3; });
+    out.push({ name: nm, price: pr, words: words });
+  }
+  return out;
+}
+
+function faqList(c) {
+  var out = [], lines = (c.faq || "").split("\n"), i, l, idx;
+  for (i = 0; i < lines.length; i++) {
+    l = lines[i].trim(); if (!l) continue;
+    idx = l.indexOf("|"); if (idx < 0) continue;
+    out.push({ keys: l.slice(0, idx).toLowerCase().split(",").map(function (k) { return k.trim(); }).filter(Boolean),
+      answer: l.slice(idx + 1).trim() });
+  }
+  return out;
+}
+function faqAnswer(t) {
+  var list = faqList(cfg), i, k;
+  for (i = 0; i < list.length; i++) for (k = 0; k < list[i].keys.length; k++) if (list[i].keys[k] && t.indexOf(list[i].keys[k]) >= 0) return list[i].answer;
+  return null;
+}
+function freeSlots() {
+  var out = [], i;
+  for (i = 0; i < SLOTS.length; i++) if (!taken[SLOTS[i]]) out.push(SLOTS[i]);
+  return out;
+}
+
+/* ---------------- ui helpers ---------------- */
+function toast(t) {
+  var el = $("toast"); el.textContent = t; el.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(function () { el.classList.remove("show"); }, 2500);
+}
+function addMsg(text, cls) {
+  var el = document.createElement("div");
+  el.className = "msg " + cls; el.textContent = text;
+  $("log").appendChild(el); $("log").scrollTop = $("log").scrollHeight;
+  if (cls.indexOf("bot") === 0) stats.handled++;
+  return el;
+}
+function setChips(list) {
+  var box = $("chips"); box.innerHTML = "";
+  for (var i = 0; i < list.length; i++) {
+    (function (item) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip " + (item.tone || "");
+      b.textContent = item.text;
+      b.onclick = function () { send(item.text, item.kind); };
+      box.appendChild(b);
+    })(list[i]);
+  }
+  box.style.display = list.length ? "flex" : "none";
+}
+var LABELS = { name:"-", treatment:"-", urgency:"-", preferred_time:"-", status:"New chat" };
+function tone(v) {
+  if (/emergency|escalat|no.show/i.test(v)) return "red";
+  if (/same day|48/i.test(v)) return "amber";
+  if (/paid|confirmed/i.test(v)) return "green";
+  if (/deposit/i.test(v)) return "purple";
+  if (/requested|routine/i.test(v)) return "green";
+  return "";
+}
+function renderSheet(force) {
+  var dds = document.querySelectorAll(".sheet dd"), i;
+  for (i = 0; i < dds.length; i++) {
+    (function (dd) {
+      var k = dd.getAttribute("data-k"), v = lead[k];
+      if (!force && prev[k] === v) return;
+      dd.textContent = ""; dd.className = v ? "" : "empty";
+      if (!v) { dd.textContent = LABELS[k]; return; }
+      if (k === "urgency" || k === "status") {
+        var p = document.createElement("span");
+        p.className = "pill " + tone(v); p.textContent = v; dd.appendChild(p);
+      } else dd.textContent = v;
+      if (!force) { dd.classList.add("flash"); setTimeout(function () { dd.classList.remove("flash"); }, 30); }
+    })(dds[i]);
+  }
+  prev = {}; for (var kk in lead) prev[kk] = lead[kk];
+}
+
+/* ---------------- demo brain ---------------- */
+var EMERGENCY = /(swell|sooj|suj).*(eye|aankh|spread|phail|breath|saans|neck|gala)|can'?t breathe|saans nahi|bleeding (won'?t|not) stop|khoon band nahi|knocked out|chest pain|seene? me dard/i;
+var PAIN = /pain|hurt|ache|dard|sore|takleef|sensitiv|\u062f\u0631\u062f|\u062a\u06a9\u0644\u06cc\u0641/i;
+var GOODBYE = /\b(bye|goodbye|khuda hafiz|allah hafiz|thats all|that's all|no thanks|bas shukriya)\b/i;
+var cap = function (s) { return s.replace(/\b[a-z]/g, function (c) { return c.toUpperCase(); }); };
+
+function buildChips() {
+  var list = services(cfg), out = [], i;
+  function add(text, t, kind) {
+    if (!text) return;
+    for (var j = 0; j < out.length; j++) if (out[j].text === text) return;
+    out.push({ text: text, tone: t || "", kind: kind });
+  }
+  if (/emergency/i.test(lead.urgency || "")) { add("I am coming now", "green"); add("Can the doctor call me?", ""); }
+  if (!lead.treatment) {
+    add("My tooth hurts badly", "red"); add("Mere daant mein dard hai", "red");
+    for (i = 0; i < list.length && i < 4; i++) add(list[i].name.split("/")[0].trim(), "");
+  } else if (!lead.name) { add("My name is Ali Raza", "green"); add("Mera naam Sara Khan hai", "green"); }
+  else if (cfg.doctors && cfg.doctors.split(",").length > 1 && !lead.doctor) {
+    var docs0 = cfg.doctors.split(",");
+    for (i = 0; i < docs0.length && i < 3; i++) add(docs0[i].trim(), "green");
+    add("Any doctor is fine", "green");
+  }
+  else if (!lead.preferred_time) {
+    var fs0 = freeSlots();
+    for (i = 0; i < fs0.length && i < 4; i++) add("Today " + fs0[i], "green");
+    add("Kal shaam", "green");
+  }
+  else { add("Change my appointment time", ""); add("Send me the location", ""); }
+  if (/deposit/i.test(lead.status || "")) add("Pay the deposit now", "purple", "pay");
+  add("🎤 Send a voice note", "purple", "voice");
+  add("Kitna charge hoga?", "");
+  add("What are your timings?", "");
+  add("Where are you located?", "");
+  add("Do you have parking?", "");
+  add("Can I pay with Easypaisa?", "");
+  add("Is a female doctor available?", "");
+  add("I want to talk to a human", "");
+  add("My face is swollen", "red");
+  if (lead.preferred_time) { add("Reschedule my appointment", ""); add("Cancel my appointment", "red"); }
+  add("Do you take insurance?", "");
+  add("Thank you, goodbye", "");
+  return out.slice(0, 13);
+}
+
+function demoReply(text) {
+  var t = text.toLowerCase(), list = services(cfg), i;
+  var wasBooked = !!lead.preferred_time && /requested|confirmed|deposit/i.test(lead.status || "");
+  var hadTreatment = !!lead.treatment;
+
+  if (GOODBYE.test(t)) {
+    return { text: "Shukriya" + (lead.name ? " " + lead.name.split(" ")[0] : "") + ". Take care, and message us anytime on WhatsApp.", tone: "ok", end: true };
+  }
+  var fa = faqAnswer(t);
+
+  if (/cancel|cancel karna|nahi aa sakta|nahi aa sakti/.test(t)) {
+    var cb = currentBooking();
+    if (cb) {
+      freeSlot(cb); cb.status = "Cancelled by patient"; cb.live = true;
+      lead.preferred_time = ""; lead.status = "Cancelled";
+      renderBookings(); renderSlots();
+      setTimeout(offerWaitlist, 400);
+      return { text: "Your appointment is cancelled, no problem. Whenever you want to come, just message me and I will book a new slot.", tone: "ok" };
+    }
+  }
+
+  if (EMERGENCY.test(t)) {
+    lead.urgency = "Emergency"; lead.status = "Emergency - staff alerted";
+    if (!lead.treatment) lead.treatment = "Urgent problem";
+    pushBooking(true);
+    return { text: "This sounds urgent. Please call us right now on " + cfg.phone + ". If you have trouble breathing or swallowing, go to the nearest hospital emergency department immediately.\n\nI have alerted our staff.", tone: "alert" };
+  }
+  if (/pay (the )?deposit|paid|payment kar/i.test(t)) {
+    var bk = currentBooking();
+    if (bk && bk.depositAsked) {
+      bk.depositPaid = true; bk.status = "Confirmed - deposit paid";
+      lead.status = "Confirmed - deposit paid";
+      renderBookings();
+      return { text: "Payment received, shukriya. Your slot is now locked in for " + bk.when + ". See you soon.", tone: "ok" };
+    }
+  }
+
+  var svc = null;
+  for (i = 0; i < list.length; i++) {
+    for (var w = 0; w < list[i].words.length; w++) if (t.indexOf(list[i].words[w]) >= 0) { svc = list[i]; break; }
+    if (svc) break;
+  }
+  if (!svc && (PAIN.test(t) || /appointment|book|milna|waqt|dikhana|check|doctor|visit|slot|time chahiye/.test(t)))
+    for (i = 0; i < list.length; i++) if (/check|consult/i.test(list[i].name)) { svc = list[i]; break; }
+  if (!svc && !lead.treatment && t.split(/\s+/).length >= 4 && !/price|cost|kitna|timing|where|kahan|insurance/.test(t) && list.length)
+    svc = list[0];  // a described problem we cannot classify still becomes a consultation
+  if (svc && !lead.treatment) lead.treatment = svc.name;
+  if (PAIN.test(t) && !lead.urgency) lead.urgency = /really|severe|bohat|bahut|zyada|unbearable|can'?t sleep/i.test(t) ? "Same day" : "Within 48 hours";
+  else if (svc && !lead.urgency) lead.urgency = "Routine";
+
+  var m = text.match(/(?:my name is|this is|i am|i'm|mera naam)\s+([a-z][a-z .'-]{1,30})/i);
+  if (m && !PAIN.test(m[1])) lead.name = cap(m[1].trim().split(/\s+/).slice(0, 3).join(" "));
+  else if (hadTreatment && !svc && !lead.name && /^[a-z .'-]{3,30}$/i.test(text.trim()) && text.trim().split(/\s+/).length <= 3 && !PAIN.test(t)) lead.name = cap(text.trim());
+
+  if (/change|reschedule|another time|doosra|dusra|badal/.test(t)) {
+    var rb = currentBooking();
+    if (rb) { freeSlot(rb); rb.status = "Reschedule requested"; rb.reminders = []; renderBookings(); renderSlots(); updateBadge(); }
+    lead.preferred_time = ""; lead.status = "Reschedule requested"; wasBooked = false;
+  }
+
+  var day = t.match(/\b(today|aaj|tomorrow|kal|monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekend)\b/);
+  var tm = t.match(/\b(\d{1,2}:\d{2}|\d{1,2}\s?(am|pm)|morning|subah|afternoon|evening|shaam|night|raat)\b/);
+  if (day || tm) {
+    var newTime = ((day ? cap(day[1]) : "") + " " + (tm ? tm[1] : "")).trim();
+    if (wasBooked && newTime && newTime.toLowerCase() !== (lead.preferred_time || "").toLowerCase()) {
+      var tb = currentBooking();
+      if (tb) { freeSlot(tb); tb.status = "Reschedule requested"; tb.reminders = []; renderBookings(); renderSlots(); updateBadge(); }
+      wasBooked = false; lead.status = "";
+    }
+    lead.preferred_time = newTime || lead.preferred_time;
+  }
+
+  var pre = [];
+  if (/price|cost|how much|fee|charge|rate|kitna|kitne|kharcha|\u0642\u06cc\u0645\u062a|\u06a9\u062a\u0646\u06cc|\u06a9\u062a\u0646\u0627/.test(t)) {
+    var known = svc;
+    if (!known && lead.treatment) for (i = 0; i < list.length; i++) if (list[i].name === lead.treatment) known = list[i];
+    if (known) pre.push(known.name + " is usually " + cfg.cur + " " + known.price + ". The doctor confirms the exact price after examining you.");
+    else if (list.length) pre.push(list[0].name + " is " + cfg.cur + " " + list[0].price + (list[1] ? ", " + list[1].name + " is " + cfg.cur + " " + list[1].price : "") + ". Which treatment do you need?");
+  }
+  if (/open|hours|timing|time|kab|khul|\u0627\u0648\u0642\u0627\u062a|\u06a9\u0628/.test(t)) pre.push("We are open " + cfg.hours + ".");
+  if (/where|address|location|kahan|kidhar|\u06a9\u06c1\u0627\u06ba|\u067e\u062a\u06c1/.test(t)) pre.push("We are in " + cfg.city + ". I will send the map pin with your booking.");
+  if (/park/.test(t)) pre.push(cfg.notes || "Ask our front desk about parking.");
+  if (/easypaisa|jazzcash|card|payment/.test(t)) pre.push("Yes, we accept cash, card, JazzCash and Easypaisa.");
+  if (/female|lady doctor/.test(t)) pre.push("Yes, a female doctor is available on request - I will note it on your booking.");
+  if (/human|staff|real person|baat karni|call me/.test(t)) { lead.status = "Escalated to staff"; pushBooking(false, "Escalated"); pre.push("No problem, a member of our team will message you shortly."); }
+  if (PAIN.test(t)) pre.push(lead.urgency === "Same day" ? "I am sorry you are in pain. Let us get you seen today." : "I am sorry to hear that. Let us get the doctor to look at it.");
+
+  if (/when is my appointment|my appointment|meri appointment|kab hai|next visit|my record|meri file|history/.test(t)) {
+    var mr = activeRecord();
+    if (mr && mr.next) pre.push("Your next appointment is " + (mr.next.slot ? mr.next.slot + ", " : "") + mr.next.when + " for " + mr.next.treatment + " with " + mr.next.doctor + ".");
+    else if (mr) pre.push("You have no upcoming appointment booked. Your last visit was on " + mr.history[mr.history.length - 1].date + " for " + mr.history[mr.history.length - 1].treatment + ".");
+  }
+
+  if (lead.name && records[lead.name] && records[lead.name].history.length > 1 && !lead.greeted) {
+    lead.greeted = true;
+    var lastV = records[lead.name].history[records[lead.name].history.length - 1];
+    pre.push("Good to hear from you again. Your last visit was " + lastV.date + " for " + lastV.treatment + ".");
+  }
+
+  if (fa) pre.push(fa);
+
+  if (!lead.treatment) return { text: pre.concat("What would you like help with?").join("\n\n") };
+  if (!lead.name) return { text: pre.concat("Can I have your name for the booking?").join("\n\n") };
+
+  var docs = (cfg.doctors || "").split(",").map(function (x) { return x.trim(); }).filter(Boolean);
+  if (docs.length > 1 && !lead.doctor) {
+    for (i = 0; i < docs.length; i++) {
+      var sur = docs[i].replace(/^dr\.?\s*/i, "").toLowerCase().split(" ")[0];
+      if (sur && t.indexOf(sur) >= 0) lead.doctor = docs[i];
+    }
+    if (/any doctor|koi bhi|anyone/.test(t)) lead.doctor = docs[0] + " (first available)";
+    if (!lead.doctor) return { text: pre.concat("Which doctor would you like to see: " + docs.join(" or ") + "?").join("\n\n") };
+  }
+  if (!lead.preferred_time) {
+    var slots = lead.urgency === "Same day" ? ["Today 5:30 pm", "Today 7 pm"] : ["Tomorrow 11 am", "Saturday 6 pm"];
+    var fs = freeSlots();
+    var offer = fs.length ? "Free slots today: " + fs.slice(0, 4).join(", ") + ". Which one suits you?"
+      : "We are fully booked today. Shall I put you on the waitlist, or book for tomorrow?";
+    return { text: pre.concat("Thanks " + lead.name.split(" ")[0] + ". " + offer).join("\n\n") };
+  }
+  if (wasBooked) return { text: pre.length ? pre.join("\n\n") : "Is there anything else I can help with?" };
+
+  lead.status = "Requested - staff to confirm";
+  var pb = pushBooking(false);
+  if (pb) { pb.status = "Requested"; pb.completed = false; renderBookings(); updateBadge(); }
+  return { text: pre.concat("Done. I have requested " + lead.treatment.toLowerCase() + " for " + lead.name + ", " + lead.preferred_time + (lead.doctor ? " with " + lead.doctor : "") + ".\n\nOur front desk will confirm on this chat shortly.").join("\n\n"), tone: "ok" };
+}
+
+/* ---------------- bookings / front desk ---------------- */
+function currentBooking() {
+  for (var i = 0; i < bookings.length; i++) if (bookings[i].live) return bookings[i];
+  return null;
+}
+function pushBooking(isEmergency, kind) {
+  var b = currentBooking();
+  if (b) {
+    b.name = lead.name || b.name; b.treatment = lead.treatment || b.treatment;
+    b.urgency = lead.urgency || b.urgency; b.when = lead.preferred_time || b.when;
+    if (isEmergency) b.status = "Emergency - call the patient";
+    renderBookings(); return b;
+  }
+  b = { id: seq++, live: true, name: lead.name || "Unknown patient", treatment: lead.treatment || "-",
+    urgency: lead.urgency || "Routine", when: lead.preferred_time || "-",
+    status: isEmergency ? "Emergency - call the patient" : (kind === "Escalated" ? "Escalated to staff" : "Requested"),
+    depositAsked: false, depositPaid: false, noShow: false, afterHours: stats.afterHoursFlag === true, reminders: [] };
+  bookings.unshift(b); getRecord(b.name); renderBookings(); updateBadge(); renderRecord();
+  return b;
+}
+function updateBadge() {
+  var n = 0, i;
+  for (i = 0; i < bookings.length; i++) if (/requested|emergency|escalated/i.test(bookings[i].status)) n++;
+  var el = $("deskBadge");
+  el.textContent = n; el.style.display = n ? "inline-block" : "none";
+}
+function confirmBooking(b) {
+  var slot = pickSlot(b.when);
+  if (!slot) {
+    if (waitlist.indexOf(b) < 0) waitlist.push(b);
+    b.status = "Waitlisted - chairs full";
+    addMsg("We are fully booked for " + b.when + ". You are first on the waitlist and I will message you the moment a slot opens.", "bot staff");
+    renderBookings(); renderSlots(); updateBadge();
+    toast("Chairs full - patient waitlisted");
+    return;
+  }
+  b.slot = slot; taken[slot] = b.id;
+  b.status = "Confirmed"; b.live = true;
+  b.reminders = [
+    { when: "24 hours before", text: "Reminder: your " + b.treatment.toLowerCase() + " at " + cfg.name + " is tomorrow, " + b.when + ". Reply CHANGE to move it." },
+    { when: "2 hours before", text: "See you in 2 hours at " + cfg.name + ", " + cfg.city + ". Map pin attached." },
+    { when: "6 months later", text: "Assalam o Alaikum " + b.name.split(" ")[0] + ", it has been 6 months since your last visit at " + cfg.name + ". Shall I book your check-up?" }
+  ];
+  lead.status = "Confirmed";
+  setNextVisit(b);
+  addMsg("Confirmed. Your " + b.treatment.toLowerCase() + " is booked at " + slot + " (" + b.when + ") with " + (cfg.doctors.split(",")[0] || "our doctor") + ". We will remind you a day before.", "bot staff");
+  renderSheet(false); renderBookings(); updateBadge(); renderStats(); renderSlots();
+  setChips(buildChips());
+  toast("Confirmed and reminders scheduled");
+}
+function askDeposit(b) {
+  var amount = Number($("i-deposit").value || 500);
+  b.depositAsked = true; b.status = "Deposit requested";
+  lead.status = "Deposit requested";
+  addMsg("To hold your slot on " + b.when + ", please pay a refundable " + cfg.cur + " " + amount + " deposit:\npay.demo/" + cfg.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "/" + b.id + "\n\nJazzCash, Easypaisa or card. It is adjusted against your bill.", "bot pay");
+  renderSheet(false); renderBookings(); updateBadge(); renderStats();
+  setChips(buildChips());
+  toast("Deposit link sent to the patient");
+}
+function markNoShow(b) {
+  b.noShow = true; b.status = "No-show";
+  freeSlot(b);
+  renderBookings(); updateBadge(); renderStats();
+  if (waitlist.length) offerWaitlist();
+}
+function completeVisit(b) {
+  b.completed = true; b.status = "Visit completed";
+  addVisitToHistory(b);
+  freeSlot(b);
+  renderBookings(); updateBadge(); renderStats();
+}
+function askReview(b) {
+  addMsg("Shukriya " + b.name.split(" ")[0] + " for visiting " + cfg.name + " today. If we looked after you well, a quick Google review helps other patients find us: g.page/" + cfg.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") + "/review", "bot staff");
+  b.reviewAsked = true;
+  renderBookings(); switchTab("chat");
+  toast("Review request sent");
+}
+function sendReminderNow(b, r) {
+  addMsg(r.text, "bot staff");
+  toast("Reminder sent (" + r.when + ")");
+  switchTab("chat");
+}
+function renderBookings() {
+  var box = $("bookings"), i;
+  box.innerHTML = "";
+  if (!bookings.length) {
+    box.innerHTML = '<p class="empty-note">No requests yet. Book an appointment in the Patient chat tab first.</p>';
+    return;
+  }
+  for (i = 0; i < bookings.length; i++) {
+    (function (b) {
+      var card = document.createElement("div");
+      card.className = "book " + (/emergency/i.test(b.status) ? "emergency" : /confirmed/i.test(b.status) ? "confirmed" : "new");
+
+      var h = document.createElement("h3"); h.textContent = b.name + " - " + b.treatment;
+      var meta = document.createElement("div"); meta.className = "meta";
+      meta.textContent = "Wants: " + b.when + (b.slot ? "  ·  chair " + b.slot : "") + "  ·  ";
+      var up = document.createElement("span"); up.className = "pill " + tone(b.urgency); up.textContent = b.urgency;
+      var sp = document.createElement("span"); sp.className = "pill " + tone(b.status); sp.style.marginLeft = "6px"; sp.textContent = b.status;
+      meta.appendChild(up); meta.appendChild(sp);
+      card.appendChild(h); card.appendChild(meta);
+
+      var row = document.createElement("div"); row.className = "btns"; row.style.marginTop = "6px";
+      function btn(label, cls, fn, disabled) {
+        var x = document.createElement("button");
+        x.type = "button"; x.className = "sm " + cls; x.textContent = label;
+        if (disabled) x.disabled = true; else x.onclick = fn;
+        row.appendChild(x);
+      }
+      if (!/confirmed/i.test(b.status)) btn("Confirm slot", "go", function () { confirmBooking(b); });
+      if (!b.depositAsked) btn("Request deposit", "blue", function () { askDeposit(b); });
+      if (!b.noShow && !b.completed) btn("Mark no-show", "warn", function () { markNoShow(b); });
+      if (/confirmed|offered/i.test(b.status) && !b.completed) btn("Visit completed", "", function () { completeVisit(b); });
+      if (b.completed && !b.reviewAsked) btn("Ask for feedback (1-5)", "blue", function () { askFeedback(b); });
+      if (b.completed && !b.reviewAsked) btn("Ask for Google review", "", function () { askReview(b); });
+      card.appendChild(row);
+
+      if (b.reminders.length) {
+        var tl = document.createElement("div"); tl.className = "timeline";
+        var head = document.createElement("div"); head.innerHTML = "<b>Scheduled messages</b>";
+        tl.appendChild(head);
+        for (var k = 0; k < b.reminders.length; k++) {
+          (function (r) {
+            var line = document.createElement("div");
+            var lbl = document.createElement("span"); lbl.textContent = r.when + ": " + r.text.slice(0, 54) + "...";
+            var go = document.createElement("button");
+            go.type = "button"; go.className = "sm"; go.textContent = "Send now";
+            go.onclick = function () { sendReminderNow(b, r); };
+            line.appendChild(lbl); line.appendChild(go);
+            tl.appendChild(line);
+          })(b.reminders[k]);
+        }
+        card.appendChild(tl);
+      }
+      box.appendChild(card);
+    })(bookings[i]);
+  }
+}
+
+/* ---------------- chair schedule + waitlist ---------------- */
+var SLOTS = ["10:00","11:00","12:00","13:00","16:00","17:00","18:00","19:00","20:00"];
+var taken = {};   // "17:00" -> booking id
+var waitlist = [];
+
+function pickSlot(wanted) {
+  var w = (wanted || "").toLowerCase(), i, hour = null;
+  var m = w.match(/(\d{1,2})(:(\d{2}))?\s?(am|pm)?/);
+  if (m) {
+    hour = parseInt(m[1], 10);
+    if (m[4] === "pm" && hour < 12) hour += 12;
+    if (!m[4] && /shaam|evening|raat|night/.test(w) && hour < 12) hour += 12;
+  } else if (/shaam|evening|raat|night/.test(w)) hour = 18;
+  else if (/subah|morning/.test(w)) hour = 11;
+  var want = hour === null ? null : (hour < 10 ? "10" : String(hour)) + ":00";
+  if (want && !taken[want] && SLOTS.indexOf(want) >= 0) return want;
+  for (i = 0; i < SLOTS.length; i++) if (!taken[SLOTS[i]]) return SLOTS[i];  // nearest free
+  return null;
+}
+function renderSlots() {
+  var box = $("slots"), i;
+  box.innerHTML = "";
+  for (i = 0; i < SLOTS.length; i++) {
+    (function (t) {
+      var d = document.createElement("div");
+      var id = taken[t];
+      var who = null, k;
+      for (k = 0; k < bookings.length; k++) if (bookings[k].id === id) who = bookings[k];
+      d.className = "slot" + (who ? (who.depositPaid ? " taken" : " hold") : "");
+      d.textContent = t + (who ? " " + who.name.split(" ")[0] : " free");
+      box.appendChild(d);
+    })(SLOTS[i]);
+  }
+  var free = 0;
+  for (i = 0; i < SLOTS.length; i++) if (!taken[SLOTS[i]]) free++;
+  $("waitNote").textContent = free + " of " + SLOTS.length + " chairs free today. Waitlist: " + waitlist.length + " patient(s).";
+}
+function freeSlot(b) {
+  if (!b.slot) return;
+  delete taken[b.slot];
+  b.slot = null;
+  renderSlots();
+}
+function offerWaitlist() {
+  var moved = 0, i;
+  for (i = 0; i < SLOTS.length && waitlist.length; i++) {
+    if (taken[SLOTS[i]]) continue;
+    var b = waitlist.shift();
+    b.slot = SLOTS[i]; taken[SLOTS[i]] = b.id; b.status = "Offered " + SLOTS[i];
+    addMsg("Good news " + b.name.split(" ")[0] + " - a slot opened at " + SLOTS[i] + " today. Reply YES to take it.", "bot staff");
+    moved++;
+  }
+  renderSlots(); renderBookings();
+  toast(moved ? moved + " waitlist patient(s) offered a slot" : "No free slots to offer");
+}
+function setTakeover(on) {
+  aiPaused = on;
+  $("takeover").textContent = "Staff takeover: " + (on ? "ON" : "OFF");
+  $("takeover").className = "sm " + (on ? "warn" : "");
+  addMsg(on ? "AI paused. A staff member is now handling this chat." : "AI resumed. The assistant will reply again.", "sys");
+}
+function staffReply(text) {
+  if (!text) return;
+  addMsg(text, "bot staff");
+  transcript.push("Staff: " + text);
+  switchTab("chat");
+  toast("Sent to the patient");
+}
+function broadcastDelay() {
+  var n = 0, i;
+  for (i = 0; i < bookings.length; i++) if (/confirmed|offered/i.test(bookings[i].status) && !bookings[i].completed) n++;
+  if (!n) { toast("No confirmed patients to notify"); return; }
+  addMsg("Assalam o Alaikum, the doctor is running about 30 minutes late today. Your appointment still stands - please come 30 minutes later, or reply CHANGE to move it.", "bot staff");
+  switchTab("chat");
+  toast("Broadcast sent to " + n + " patient(s) booked today");
+}
+function bookingsCSV() {
+  var head = "id,name,treatment,urgency,wanted,slot,status,deposit_paid,no_show";
+  var rows = [head], i;
+  for (i = 0; i < bookings.length; i++) {
+    var b = bookings[i];
+    rows.push([b.id, b.name, b.treatment, b.urgency, b.when, b.slot || "", b.status, b.depositPaid ? "yes" : "no", b.noShow ? "yes" : "no"]
+      .map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(","));
+  }
+  return rows.join("\n");
+}
+
+/* ---------------- patient file: history, next visit, printable record ---------------- */
+var records = {};   // keyed by patient name
+
+function todayStr(offsetDays) {
+  var d = new Date(); d.setDate(d.getDate() + (offsetDays || 0));
+  return d.toISOString().slice(0, 10);
+}
+function getRecord(name) {
+  if (!name) return null;
+  if (!records[name]) {
+    records[name] = {
+      name: name, phone: "+92 3XX XXXXXXX", file: "PF-" + (1000 + Object.keys(records).length + 1),
+      history: [{ date: todayStr(-180), treatment: "Check-up / consultation", doctor: (cfg.doctors || "").split(",")[0] || "Clinic doctor", notes: "Routine check-up. Advised cleaning in 6 months.", fee: "" }],
+      next: null, allergies: "None recorded", lastUpdated: todayStr(0)
+    };
+  }
+  return records[name];
+}
+function setNextVisit(b) {
+  var r = getRecord(b.name); if (!r) return;
+  r.next = { date: todayStr(0), slot: b.slot || "", when: b.when, treatment: b.treatment, doctor: b.doctor || lead.doctor || ((cfg.doctors || "").split(",")[0] || "Clinic doctor") };
+  r.lastUpdated = todayStr(0);
+  saveRecords();
+  renderRecord();
+}
+function addVisitToHistory(b) {
+  // history is kept in this browser so returning patients are recognised next time
+  var r = getRecord(b.name); if (!r) return;
+  r.history.push({ date: todayStr(0), treatment: b.treatment, doctor: b.doctor || ((cfg.doctors || "").split(",")[0] || "Clinic doctor"),
+    notes: "Visit completed." + (b.depositPaid ? " Deposit adjusted against the bill." : ""), fee: "" });
+  r.next = null; r.lastUpdated = todayStr(0);
+  saveRecords();
+  renderRecord();
+}
+function activeRecord() {
+  var b = currentBooking();
+  if (b && records[b.name]) return records[b.name];
+  var keys = Object.keys(records);
+  return keys.length ? records[keys[keys.length - 1]] : null;
+}
+function renderRecord() {
+  var box = $("record"), r = activeRecord(), i;
+  box.innerHTML = "";
+  if (!r) { box.innerHTML = '<p class="empty-note">No patient file yet. Book an appointment first.</p>'; return; }
+
+  var head = document.createElement("div"); head.className = "book confirmed";
+  var h = document.createElement("h3"); h.textContent = r.name + "  ·  file " + r.file;
+  var meta = document.createElement("div"); meta.className = "meta";
+  meta.textContent = r.next
+    ? "Next visit: " + (r.next.slot ? r.next.slot + " " : "") + r.next.when + " · " + r.next.treatment + " · " + r.next.doctor
+    : "No upcoming appointment booked.";
+  head.appendChild(h); head.appendChild(meta);
+
+  var tbl = document.createElement("table");
+  var hr = document.createElement("tr");
+  ["Date", "Treatment", "Doctor", "Notes"].forEach(function (c) { var th = document.createElement("th"); th.textContent = c; hr.appendChild(th); });
+  tbl.appendChild(hr);
+  for (i = r.history.length - 1; i >= 0; i--) {
+    (function (v) {
+      var tr = document.createElement("tr");
+      [v.date, v.treatment, v.doctor, v.notes].forEach(function (c) { var td = document.createElement("td"); td.textContent = c; tr.appendChild(td); });
+      tbl.appendChild(tr);
+    })(r.history[i]);
+  }
+  head.appendChild(tbl);
+  box.appendChild(head);
+}
+function recordHTML(r) {
+  var rows = "", i;
+  for (i = r.history.length - 1; i >= 0; i--) {
+    var v = r.history[i];
+    rows += "<tr><td>" + v.date + "</td><td>" + v.treatment + "</td><td>" + v.doctor + "</td><td>" + v.notes + "</td></tr>";
+  }
+  return "<!doctype html><html><head><meta charset='utf-8'><title>" + r.name + " - patient record</title>" +
+    "<style>body{font:14px Arial,Helvetica,sans-serif;color:#0C1A33;padding:28px;max-width:760px;margin:auto}" +
+    "h1{font-size:20px;margin:0 0 2px}h2{font-size:15px;margin:22px 0 6px}" +
+    ".muted{color:#5A6B87}table{width:100%;border-collapse:collapse;margin-top:6px}" +
+    "th,td{border:1px solid #D2DEF2;padding:7px 9px;text-align:left;font-size:13px}th{background:#EEF3FC}" +
+    ".next{border:2px solid #12885A;border-radius:8px;padding:10px 12px;margin-top:8px;background:#F2FBF7}" +
+    ".foot{margin-top:26px;font-size:11px;color:#5A6B87;border-top:1px solid #D2DEF2;padding-top:8px}</style></head><body>" +
+    "<h1>" + cfg.name + "</h1><div class='muted'>" + cfg.city + " · " + cfg.phone + " · " + cfg.hours + "</div>" +
+    "<h2>Patient record</h2><div><b>" + r.name + "</b> · file " + r.file + " · updated " + r.lastUpdated + "</div>" +
+    "<div class='muted'>Allergies: " + r.allergies + "</div>" +
+    (r.next ? "<div class='next'><b>Next appointment:</b> " + (r.next.slot ? r.next.slot + " · " : "") + r.next.when + " · " + r.next.treatment + " · " + r.next.doctor + "</div>" : "") +
+    "<h2>Treatment history at this clinic</h2><table><tr><th>Date</th><th>Treatment</th><th>Doctor</th><th>Notes</th></tr>" + rows + "</table>" +
+    "<div class='foot'>Generated by the " + cfg.name + " WhatsApp assistant. Share only with the patient. Not a medical report; for clinical details see the doctor's notes.</div></body></html>";
+}
+function openRecord() {
+  var r = activeRecord();
+  if (!r) { toast("No patient file yet"); return; }
+  var html = recordHTML(r), w = null;
+  try { w = window.open("", "_blank"); } catch (e) { w = null; }
+  if (w && w.document) {
+    w.document.write(html); w.document.close();
+    setTimeout(function () { try { w.print(); } catch (e) {} }, 400);
+    toast("Printable record opened - choose 'Save as PDF'");
+    return;
+  }
+  var panel = $("printPanel");            // popup blocked: show it inline instead
+  panel.style.display = "block";
+  panel.innerHTML = "";
+  var frame = document.createElement("iframe");
+  frame.style.width = "100%"; frame.style.height = "420px"; frame.style.border = "0"; frame.style.background = "#fff";
+  frame.srcdoc = html;
+  var bar = document.createElement("div"); bar.className = "btns";
+  var pr = document.createElement("button"); pr.type = "button"; pr.className = "sm blue"; pr.textContent = "Print / save as PDF";
+  pr.onclick = function () { try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { toast("Use your browser menu: Print"); } };
+  var cl = document.createElement("button"); cl.type = "button"; cl.className = "sm"; cl.textContent = "Close";
+  cl.onclick = function () { panel.style.display = "none"; };
+  bar.appendChild(pr); bar.appendChild(cl);
+  panel.appendChild(frame); panel.appendChild(bar);
+  toast("Record ready below - print or save as PDF");
+}
+function sendRecordToPatient() {
+  var r = activeRecord();
+  if (!r) { toast("No patient file yet"); return; }
+  addMsg("Here is your record from " + cfg.name + " (PDF):\nfiles.demo/" + r.file.toLowerCase() + ".pdf\n\n" +
+    (r.next ? "Next appointment: " + (r.next.slot ? r.next.slot + ", " : "") + r.next.when + " with " + r.next.doctor + "." : "No upcoming appointment yet - reply BOOK to arrange one."), "bot staff");
+  switchTab("chat");
+  toast("Record sent to the patient");
+}
+function notifyBoth() {
+  var r = activeRecord();
+  if (!r || !r.next) { toast("No upcoming appointment to notify about"); return; }
+  addMsg("Appointment confirmed: " + (r.next.slot ? r.next.slot + ", " : "") + r.next.when + " for " + r.next.treatment + " with " + r.next.doctor + ". Reply CHANGE to reschedule or CANCEL to cancel.", "bot staff");
+  addMsg("Doctor notified: " + r.next.doctor + " received the schedule update for " + r.name + " (" + (r.next.slot || r.next.when) + ", " + r.next.treatment + ") with the patient file attached.", "sys");
+  switchTab("chat");
+  toast("Patient and doctor notified");
+}
+
+/* ---------------- feedback, digest, saved history ---------------- */
+var RATING_MODE = false, ratings = [];
+
+function askFeedback(b) {
+  RATING_MODE = true;
+  addMsg("Shukriya " + b.name.split(" ")[0] + " for visiting " + cfg.name + " today. How was your experience? Reply with a number from 1 (poor) to 5 (excellent).", "bot staff");
+  switchTab("chat");
+  setChips([{ text: "5", tone: "green" }, { text: "4", tone: "green" }, { text: "3", tone: "" }, { text: "2", tone: "red" }, { text: "1", tone: "red" }]);
+  toast("Feedback request sent");
+}
+function ratingReply(v) {
+  var n = parseInt(v, 10);
+  RATING_MODE = false;
+  ratings.push(n);
+  renderStats();
+  if (n >= 4) {
+    var b1 = currentBooking(); if (b1) b1.reviewAsked = true;
+    renderBookings();
+    return { text: "That is wonderful to hear, shukriya. If you have a moment, a Google review helps other patients find us: g.page/" + (cfg.name || "clinic").toLowerCase().replace(/[^a-z0-9]+/g, "-") + "/review", tone: "ok" };
+  }
+  var b2 = currentBooking();
+  if (b2) { b2.status = "Complaint - staff to call"; renderBookings(); updateBadge(); }
+  return { text: "I am sorry it was not better. Our manager will call you personally today to put it right. Nothing is posted publicly.", tone: "alert" };
+}
+function doctorDigest() {
+  var confirmed = 0, done = 0, noshow = 0, emerg = 0, dep = 0, i;
+  for (i = 0; i < bookings.length; i++) {
+    var b = bookings[i];
+    if (/confirmed|offered/i.test(b.status)) confirmed++;
+    if (b.completed) done++;
+    if (b.noShow) noshow++;
+    if (/emergency/i.test(b.status)) emerg++;
+    if (b.depositPaid) dep++;
+  }
+  var avg = ratings.length ? (ratings.reduce(function (a, c) { return a + c; }, 0) / ratings.length).toFixed(1) : "-";
+  var txt = "Daily summary for " + (cfg.doctors || "the doctor").split(",")[0] + " - " + cfg.name + "\n" +
+    "Booked today: " + confirmed + "  |  Completed: " + done + "  |  No-shows: " + noshow + "\n" +
+    "Emergencies handled: " + emerg + "  |  Deposits paid: " + dep + "\n" +
+    "Patient messages answered: " + stats.handled + "  |  Average rating: " + avg + "\n" +
+    "Waitlist: " + waitlist.length + " patient(s). Chairs free tomorrow: " + freeSlots().length + ".";
+  addMsg(txt, "sys");
+  switchTab("chat");
+  toast("Daily summary sent to the doctor");
+}
+function saveRecords() { try { localStorage.setItem("clinic-records-v1", JSON.stringify(records)); } catch (e) {} }
+function loadRecords() { try { records = JSON.parse(localStorage.getItem("clinic-records-v1") || "{}") || {}; } catch (e) { records = {}; } }
+
+/* ---------------- revenue report ---------------- */
+function num(id, dflt) { var v = Number(($(id).value || "").replace(/[^0-9.]/g, "")); return isNaN(v) || !v ? dflt : v; }
+function fmt(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function renderStats() {
+  var fee = num("i-fee", 2000), visits = num("i-visits", 300), rate = num("i-noshow", 30) / 100;
+  var deposit = num("i-deposit", 500), price = num("i-price", 14999), after = num("i-after", 40) / 100;
+  var cur = cfg.cur || "PKR";
+
+  var lostNow = visits * rate * fee;                 // revenue lost to no-shows today
+  var savedReminders = lostNow * 0.35;               // reminders alone
+  var savedDeposits = lostNow * 0.25;                // deposits on top
+  var recallVisits = visits * 0.08;                  // 6-month recall bookings
+  var recallRevenue = recallVisits * fee;
+  var afterHours = visits * after * 0.2 * fee;       // after-hours enquiries otherwise lost
+  var total = savedReminders + savedDeposits + recallRevenue + afterHours;
+
+  var confirmed = 0, deposits = 0, i;
+  for (i = 0; i < bookings.length; i++) { if (/confirmed/i.test(bookings[i].status)) confirmed++; if (bookings[i].depositPaid) deposits++; }
+
+  var cells = [
+    ["Lost to no-shows now", cur + " " + fmt(lostNow), ""],
+    ["Recovered by reminders", cur + " " + fmt(savedReminders), "green"],
+    ["Recovered by deposits", cur + " " + fmt(savedDeposits), "green"],
+    ["6-month recall bookings", cur + " " + fmt(recallRevenue), "green"],
+    ["After-hours patients kept", cur + " " + fmt(afterHours), "green"],
+    ["Total monthly gain", cur + " " + fmt(total), "green"],
+    ["Messages handled in demo", String(stats.handled), ""],
+    ["Patient messages", String(stats.patient), ""],
+    ["Average rating", ratings.length ? (ratings.reduce(function (a, c) { return a + c; }, 0) / ratings.length).toFixed(1) + " / 5" : "-", "green"],
+    ["Chat-to-booking rate", (stats.patient ? Math.round((bookings.length / stats.patient) * 100) : 0) + "%", ""],
+    ["Bookings confirmed in demo", String(confirmed) + " (" + deposits + " paid)", ""]
+  ];
+  var box = $("stats"); box.innerHTML = "";
+  for (i = 0; i < cells.length; i++) {
+    var d = document.createElement("div");
+    var st = document.createElement("strong");
+    st.textContent = cells[i][1];
+    if (cells[i][2] === "green") st.style.color = "var(--green)";
+    var sp = document.createElement("span"); sp.textContent = cells[i][0];
+    d.appendChild(st); d.appendChild(sp); box.appendChild(d);
+  }
+  var multiple = price ? total / price : 0;
+  $("roiLine").textContent = "At " + cur + " " + fmt(price) + " per month, the clinic gets back about " +
+    multiple.toFixed(1) + "x what it pays. Break-even needs only " + Math.ceil(price / fee) + " recovered visits a month.";
+}
+
+/* ---------------- live AI layer ---------------- */
+function systemPrompt(c) {
+  var list = services(c), lines = [], i;
+  for (i = 0; i < list.length; i++) lines.push("- " + list[i].name + ": " + c.cur + " " + list[i].price);
+  return "You are the WhatsApp receptionist for " + c.name + ", a clinic in " + c.city + ".\n" +
+    "Phone: " + c.phone + ". Timings: " + c.hours + "." + (c.doctors ? " Doctors: " + c.doctors + "." : "") + "\n" +
+    "Prices (ranges; the doctor confirms the exact price after examining the patient):\n" + lines.join("\n") + "\n" +
+    (c.notes ? "Other notes: " + c.notes + "\n" : "") +
+    (c.faq ? "Clinic FAQs (use these answers when they fit):\n" + c.faq + "\n" : "") +
+    "\nAnswer questions briefly and warmly; collect the patient's name, what they need, urgency and preferred day/time; then say the front desk will confirm. Never claim a slot is already confirmed.\n" +
+    "Style: WhatsApp-length, at most 3 short sentences, no markdown. Reply in the patient's language (" + c.lang + "; match Roman Urdu with Roman Urdu). One question at a time.\n" +
+    "Safety: never diagnose, never interpret photos or reports, never name medicines or doses - the doctor must examine them. Emergency signs (spreading facial or neck swelling, trouble breathing or swallowing, bleeding that will not stop, chest pain, knocked-out tooth, major injury, fits, high fever in a small child): tell them to call " + c.phone + " now and to go to the nearest emergency department if breathing or swallowing is affected, and set status to \"Emergency - staff alerted\". Never invent prices, doctors, discounts or slots.";
+}
+var serverAI = false, aiLabel = "Demo brain (built-in rules)";
+
+function setMode(txt) { aiLabel = txt; $("mode").textContent = txt; }
+
+function initAI() {
+  // 1. Own Netlify function (real Claude, key kept on the server)
+  fetch("/.netlify/functions/chat", { method: "GET" }).then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (info) {
+      if (info && info.ai) { serverAI = true; setMode("Live AI on your site (" + (info.model || "claude") + ")"); }
+      else if (info && !info.ai) setMode("Demo brain - add ANTHROPIC_API_KEY in Netlify to switch on live AI");
+    }).catch(function () {});
+
+  // 2. Running inside Claude
+  if (window.claude && window.claude.use) {
+    samplePromise = window.claude.use("sample").then(function (s2) {
+      sample = s2;
+      if (sample && !serverAI) setMode("Live AI ready - the first message asks you to allow it.");
+      return s2;
+    }).catch(function () { return null; });
+  }
+}
+
+function convoMessages() {
+  var out = [], i;
+  for (i = 0; i < transcript.length; i++) {
+    var line = transcript[i];
+    if (line.indexOf("Patient: ") === 0) out.push({ role: "user", content: line.slice(9) });
+    else if (line.indexOf("Receptionist: ") === 0) out.push({ role: "assistant", content: line.slice(14) });
+    else if (line.indexOf("Staff: ") === 0) out.push({ role: "assistant", content: line.slice(7) });
+  }
+  while (out.length && out[0].role !== "user") out.shift();
+  return out;
+}
+function historyLine() {
+  var r = activeRecord();
+  if (!r) return "";
+  var bits = [], i;
+  for (i = Math.max(0, r.history.length - 3); i < r.history.length; i++) bits.push(r.history[i].date + " " + r.history[i].treatment);
+  return r.name + " - past visits: " + (bits.join("; ") || "none") + (r.next ? ". Next booked: " + (r.next.slot || "") + " " + r.next.when : "");
+}
+function applyLead(l) {
+  if (!l) return;
+  for (var k in LABELS) if (typeof l[k] === "string" && l[k]) lead[k] = l[k];
+  if (lead.name && lead.treatment && lead.preferred_time) {
+    var b = pushBooking(/emergency/i.test(lead.urgency || ""));
+    if (b && !/confirmed|deposit/i.test(b.status)) b.status = /emergency/i.test(lead.urgency || "") ? b.status : "Requested";
+  }
+}
+
+function serverReply() {
+  return fetch("/.netlify/functions/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ clinic: cfg, messages: convoMessages(), history: historyLine() })
+  }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (res) {
+      if (!res.ok || !res.j || !res.j.reply) throw new Error((res.j && res.j.error) || "AI unavailable");
+      applyLead(res.j.lead);
+      return { text: res.j.reply, tone: /emergency/i.test(lead.urgency || "") ? "alert" : "" };
+    });
+}
+
+function systemPrompt(c) {
+  var list = services(c), lines = [], i;
+  for (i = 0; i < list.length; i++) lines.push("- " + list[i].name + ": " + c.cur + " " + list[i].price);
+  return "You are the WhatsApp receptionist for " + c.name + ", a clinic in " + c.city + ". Warm, brief, human - never robotic.\n" +
+    "Phone: " + c.phone + ". Timings: " + c.hours + "." + (c.doctors ? " Doctors: " + c.doctors + "." : "") + "\n" +
+    "Prices (ranges; the doctor confirms after examining):\n" + lines.join("\n") + "\n" +
+    (c.notes ? "Other notes: " + c.notes + "\n" : "") +
+    (c.faq ? "Clinic FAQs:\n" + c.faq + "\n" : "") +
+    (historyLine() ? "Patient history: " + historyLine() + "\n" : "") +
+    "\nCollect what they need, their name, urgency and preferred time, then say the front desk will confirm. Never claim a slot is confirmed.\n" +
+    "Style: one to three short WhatsApp sentences, no markdown, mirror their language exactly (Roman Urdu stays Roman Urdu), one question at a time, never repeat a sentence.\n" +
+    "Safety: never diagnose, never read photos or reports, never name medicines or doses. Emergencies (spreading swelling, trouble breathing or swallowing, bleeding that will not stop, chest pain, knocked-out tooth, major injury, fits, high fever in a small child): tell them to call " + c.phone + " now and go to the nearest emergency department if breathing or swallowing is affected, and set status \"Emergency - staff alerted\". Never invent prices, doctors, discounts or slots.";
+}
+function aiReply(text) {
+  var prompt = systemPrompt(cfg) + "\n\nBooking sheet so far: " + JSON.stringify(lead) +
+    "\nConversation:\n" + transcript.join("\n") +
+    "\n\nReturn ONLY JSON: {\"reply\": string, \"lead\": {\"name\": string, \"treatment\": string, \"urgency\": \"Emergency\"|\"Same day\"|\"Within 48 hours\"|\"Routine\"|\"\", \"preferred_time\": string, \"status\": string}}";
+  return sample.json(prompt, { modelTier: "quick", cache: false }).then(function (out) {
+    if (!out || typeof out.reply !== "string") throw new Error("bad output");
+    applyLead(out.lead);
+    return { text: out.reply, tone: /emergency/i.test(lead.urgency || "") ? "alert" : "" };
+  });
+}
+
+/* ---------------- send ---------------- */
+function send(text, kind, meta) {
+  if (!text || busy) return;
+  busy = true; $("input").value = ""; setChips([]);
+
+  if (kind === "voice") {
+    var secs = meta && meta.secs ? meta.secs : 7;
+    if (!(meta && meta.noBubble)) addVoiceBubble(secs, null);
+    addMsg("Transcribed: \"" + text + "\"", "sys");
+  } else {
+    addMsg(text, "me" + (PAIN.test(text) || EMERGENCY.test(text) ? " symptom" : ""));
+  }
+  transcript.push("Patient: " + text);
+  stats.patient++;
+
+  if (aiPaused) {
+    addMsg("Staff takeover is on - the assistant stayed quiet. Reply from the Front desk tab.", "sys");
+    setChips(buildChips());
+    busy = false;
+    return;
+  }
+
+  var typing = addMsg("typing...", "sys");
+
+  var wait = samplePromise ? Promise.race([samplePromise, new Promise(function (r) { setTimeout(function () { r(sample); }, 4000); })]) : Promise.resolve(null);
+
+  wait.then(function () {
+    if (GOODBYE.test(text) || /pay (the )?deposit|paid/i.test(text)) return demoReply(text);
+    if (RATING_MODE && /^[1-5]$/.test(text.trim())) return ratingReply(text.trim());
+    if (serverAI) return serverReply().catch(function (e) {
+      addMsg("Live AI unavailable (" + (e && e.message ? e.message : "error") + ") - using built-in replies.", "sys");
+      return demoReply(text);
+    });
+    if (sample) return aiReply(text).catch(function () { return demoReply(text); });
+    return demoReply(text);
+  }).then(function (res) {
+    typing.remove();
+    addMsg(res.text, "bot " + (res.tone || ""));
+    transcript.push("Receptionist: " + res.text);
+    renderSheet(false); renderBookings(); updateBadge(); renderStats();
+    setChips(res.end ? [] : buildChips());
+  }).catch(function (e) {
+    typing.remove();
+    addMsg("Reply failed: " + (e && e.message ? e.message : "unknown") + ". Send it again.", "sys");
+  }).then(function () { busy = false; $("input").focus(); });
+}
+
+/* ---------------- voice input: record, play back, transcribe ---------------- */
+var recog = null, media = null, chunks = [], micStream = null;
+var recording = false, recStart = 0, recTick = null, finalText = "";
+
+function setVoiceState(msg, bad) {
+  var el = $("voiceState");
+  el.textContent = msg || "";
+  el.style.display = msg ? "flex" : "none";
+  el.style.color = bad ? "var(--red)" : "var(--muted)";
+}
+function hasSR() { return !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
+
+function drawWave() {
+  var w = $("wave"), i;
+  if (!w.children.length) for (i = 0; i < 22; i++) w.appendChild(document.createElement("i"));
+  for (i = 0; i < w.children.length; i++) w.children[i].style.height = (4 + Math.round(Math.random() * 14)) + "px";
+}
+function tick() {
+  var secs = Math.floor((Date.now() - recStart) / 1000);
+  $("recTime").textContent = "0:" + (secs < 10 ? "0" : "") + secs;
+  drawWave();
+  if (secs >= 60) stopRecording(true);
+}
+
+function startRecording() {
+  if (recording) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { micFailed("this browser does not offer microphone access"); return; }
+  setVoiceState("Asking for microphone permission...");
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(function (st) {
+    micStream = st; chunks = [];
+    try {
+      media = new MediaRecorder(st);
+      media.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      media.start();
+    } catch (e) { media = null; }
+    startSR();
+    recording = true; recStart = Date.now(); finalText = "";
+    $("recbar").classList.add("on");
+    $("mic").classList.add("rec"); $("mic").textContent = "\u25A0";
+    setVoiceState("Recording. Speak now, then tap Send.");
+    recTick = setInterval(tick, 320); tick();
+  }).catch(function (err) {
+    micFailed(err && err.name === "NotAllowedError"
+      ? "the browser blocked microphone permission for this page"
+      : "the microphone could not be opened (" + ((err && err.name) || "unknown") + ")");
+  });
+}
+
+function startSR() {
+  if (!hasSR()) return;
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  try { recog = new SR(); } catch (e) { recog = null; return; }
+  recog.lang = $("voiceLang").value;
+  recog.interimResults = true;
+  recog.continuous = true;
+  recog.onresult = function (ev) {
+    var interim = "", i;
+    for (i = ev.resultIndex; i < ev.results.length; i++) {
+      if (ev.results[i].isFinal) finalText += ev.results[i][0].transcript + " ";
+      else interim += ev.results[i][0].transcript;
+    }
+    if (interim || finalText) setVoiceState("Hearing: " + (finalText + interim).slice(-60));
+  };
+  recog.onerror = function () {};
+  try { recog.start(); } catch (e) {}
+}
+
+function micFailed(why) {
+  recording = false;
+  $("recbar").classList.remove("on");
+  $("mic").classList.remove("rec"); $("mic").textContent = "\uD83C\uDFA4";
+  setVoiceState("Mic unavailable: " + why + ". Type the sentence below and send it as a voice note instead.", true);
+  addMsg("The microphone is not available here because " + why + ". You can still demo voice: type the sentence in the box under the chat and tap 'Send as voice note'.", "sys");
+  try { $("voiceText").focus(); } catch (e) {}
+}
+
+function stopRecording(doSend) {
+  if (!recording) return;
+  recording = false;
+  clearInterval(recTick);
+  var secs = Math.max(1, Math.round((Date.now() - recStart) / 1000));
+  $("recbar").classList.remove("on");
+  $("mic").classList.remove("rec"); $("mic").textContent = "\uD83C\uDFA4";
+  if (recog) { try { recog.stop(); } catch (e) {} }
+
+  var finish = function () {
+    if (micStream) { try { micStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {} micStream = null; }
+    if (!doSend) { setVoiceState("Recording cancelled."); return; }
+    var url = null;
+    if (chunks.length) { try { url = URL.createObjectURL(new Blob(chunks, { type: chunks[0].type || "audio/webm" })); } catch (e) {} }
+    var said = finalText.trim();
+    setVoiceState("");
+    if (!said && !url) { setVoiceState("Nothing was captured. Try again, or type it below.", true); return; }
+    if (!said) {
+      addVoiceBubble(secs, url);
+      addMsg("Audio recorded, but this browser could not transcribe it. Type what was said in the voice box below.", "sys");
+      return;
+    }
+    addVoiceBubble(secs, url);
+    send(said, "voice", { secs: secs, noBubble: true });
+  };
+  if (media && media.state !== "inactive") { media.onstop = finish; try { media.stop(); } catch (e) { finish(); } }
+  else setTimeout(finish, 400);
+}
+
+function addVoiceBubble(secs, url) {
+  var el = document.createElement("div");
+  el.className = "msg me voice";
+  var box = document.createElement("div"); box.className = "voicemsg";
+  var play = document.createElement("button");
+  play.type = "button"; play.className = "playbtn"; play.textContent = url ? "\u25B6" : "\uD83C\uDFA4";
+  var bars = document.createElement("div"); bars.className = "bars";
+  for (var i = 0; i < 20; i++) { var b = document.createElement("i"); b.style.height = (5 + ((i * 7) % 15)) + "px"; bars.appendChild(b); }
+  var time = document.createElement("span"); time.textContent = "0:" + (secs < 10 ? "0" : "") + secs;
+  if (url) {
+    var audio = new Audio(url);
+    play.onclick = function () {
+      if (audio.paused) { audio.play(); play.textContent = "\u275A\u275A"; } else { audio.pause(); play.textContent = "\u25B6"; }
+    };
+    audio.onended = function () { play.textContent = "\u25B6"; };
+  } else {
+    play.onclick = function () { setVoiceState("Playback is only available for recorded voice notes."); };
+  }
+  box.appendChild(play); box.appendChild(bars); box.appendChild(time);
+  el.appendChild(box);
+  $("log").appendChild(el); $("log").scrollTop = $("log").scrollHeight;
+}
+
+function toggleRecording() { if (recording) stopRecording(true); else startRecording(); }
+
+/* ---------------- tabs / restart / export ---------------- */
+function switchTab(id) {
+  var tabs = document.querySelectorAll(".tab"), panels = document.querySelectorAll(".panel"), i;
+  for (i = 0; i < tabs.length; i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-tab") === id);
+  for (i = 0; i < panels.length; i++) panels[i].classList.toggle("on", panels[i].id === "p-" + id);
+  if (id === "impact") renderStats();
+}
+function newChat() {
+  var b = currentBooking(); if (b) b.live = false;
+  transcript = []; lead = {}; prev = {};
+  $("log").innerHTML = ""; renderSheet(true);
+  addMsg("Assalam o Alaikum, welcome to " + (cfg.name || "our clinic") + ". How can I help you today?", "bot");
+  setChips(buildChips());
+  switchTab("chat");
+}
+function restart(announce) {
+  cfg = readForm(); persist(cfg);
+  var clinicName = cfg.name || "Your clinic";
+  $("hname").textContent = clinicName;
+  var parts = clinicName.split(/\s+/), ini = "", i;
+  for (i = 0; i < parts.length && ini.length < 2; i++) if (parts[i][0]) ini += parts[i][0];
+  $("ini").textContent = ini.toUpperCase() || "C";
+  $("hsub").textContent = cfg.city ? cfg.city + " - replies instantly" : "Replies instantly, 24/7";
+  document.title = clinicName + " - clinic console demo";
+  bookings = []; seq = 1; stats = { handled: 0, afterHours: 0, patient: 0, booked: 0 }; taken = {}; waitlist = [];
+  aiPaused = false; $("takeover").textContent = "Staff takeover: OFF"; $("takeover").className = "sm";
+  loadRecords();
+  renderBookings(); updateBadge(); renderStats(); renderSlots(); renderRecord();
+  newChat();
+  if (announce) toast("Saved - now demoing " + clinicName);
+}
+function exportJson() {
+  var c = readForm(); persist(c);
+  var list = services(c), map = {}, i;
+  for (i = 0; i < list.length; i++) map[list[i].name] = list[i].price;
+  var split = function (s) { return s.split(",").map(function (x) { return x.trim(); }).filter(Boolean); };
+  var json = JSON.stringify({
+    id: (c.name || "clinic").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    phone_number_id: "PUT_META_PHONE_NUMBER_ID_HERE", market: "PK", plan: "growth", active: true,
+    config: { name: c.name, city: c.city, phone: c.phone, hours: c.hours, languages: split(c.lang),
+      currency: c.cur, doctors: split(c.doctors), staffWhatsApp: "", services: map, extraNotes: c.notes }
+  }, null, 2);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(json).then(function () { toast("Clinic JSON copied"); })
+      .catch(function () { $("note").textContent = "Could not copy. The JSON is in the browser console."; console.log(json); });
+  } else { $("note").textContent = "Clipboard unavailable. The JSON is in the browser console."; console.log(json); }
+}
+
+/* ---------------- wiring ---------------- */
+loadSaved();
+loadRecords();
+var tabEls = document.querySelectorAll(".tab");
+for (var ti = 0; ti < tabEls.length; ti++) {
+  (function (el) { el.addEventListener("click", function () { switchTab(el.getAttribute("data-tab")); }); })(tabEls[ti]);
+}
+$("apply").addEventListener("click", function () { restart(true); });
+$("export").addEventListener("click", exportJson);
+$("newPatient").addEventListener("click", newChat);
+$("voiceBtn").addEventListener("click", function () {
+  send("Assalam o alaikum, mere bache ke daant mein dard hai, kal appointment mil sakti hai?", "voice", { secs: 7 });
+});
+$("mic").addEventListener("click", toggleRecording);
+$("recCancel").addEventListener("click", function () { stopRecording(false); });
+$("recSend").addEventListener("click", function () { stopRecording(true); });
+$("voiceSend").addEventListener("click", function () {
+  var v = $("voiceText").value.trim();
+  if (!v) { setVoiceState("Type the sentence first, then send it as a voice note."); return; }
+  $("voiceText").value = "";
+  send(v, "voice", { secs: Math.max(2, Math.min(20, Math.round(v.length / 12))) });
+});
+$("voiceText").addEventListener("keydown", function (e) { if (e.key === "Enter") $("voiceSend").click(); });
+(function () {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) setVoiceState("This browser cannot record. Use the voice note box below.", true);
+  else if (!hasSR()) setVoiceState("Recording works here, but this browser cannot turn speech into text. Chrome or Edge adds the transcript.");
+  else setVoiceState("Tap the mic and speak. The first use asks for microphone permission.");
+})();
+$("composer").addEventListener("submit", function (e) { e.preventDefault(); send($("input").value.trim()); });
+$("fillWait").addEventListener("click", offerWaitlist);
+$("digest").addEventListener("click", doctorDigest);
+$("recPdf").addEventListener("click", openRecord);
+$("recSendPatient").addEventListener("click", sendRecordToPatient);
+$("recNotify").addEventListener("click", notifyBoth);
+$("takeover").addEventListener("click", function () { setTakeover(!aiPaused); });
+$("broadcast").addEventListener("click", broadcastDelay);
+$("staffSend").addEventListener("click", function () { staffReply($("staffMsg").value.trim()); $("staffMsg").value = ""; });
+$("staffMsg").addEventListener("keydown", function (e) { if (e.key === "Enter") $("staffSend").click(); });
+$("csv").addEventListener("click", function () {
+  var csv = bookingsCSV();
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(csv).then(function () { toast("Bookings CSV copied"); }).catch(function () { console.log(csv); toast("CSV printed in console"); });
+  else { console.log(csv); toast("CSV printed in console"); }
+});
+var inputs = ["i-fee", "i-visits", "i-noshow", "i-deposit", "i-price", "i-after"];
+for (var ii = 0; ii < inputs.length; ii++) $(inputs[ii]).addEventListener("input", renderStats);
+
+restart(false);
+initAI();
+
+// installable app: register the offline worker and offer an Install button
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () { navigator.serviceWorker.register("./sw.js").catch(function () {}); });
+}
+window.addEventListener("beforeinstallprompt", function (e) {
+  e.preventDefault();
+  var btn = document.createElement("button");
+  btn.type = "button"; btn.className = "tab"; btn.textContent = "Install app";
+  btn.style.background = "var(--green)"; btn.style.color = "#fff"; btn.style.borderColor = "var(--green)";
+  btn.onclick = function () { e.prompt(); btn.remove(); };
+  document.querySelector(".tabs").appendChild(btn);
+});
+
+window.__demo = { send: send, restart: restart, confirmFirst: function () { if (bookings[0]) confirmBooking(bookings[0]); },
+  depositFirst: function () { if (bookings[0]) askDeposit(bookings[0]); },
+  state: function () { return { lead: lead, bookings: bookings }; } };
+})();
+</script>
+</body>
+</html>
